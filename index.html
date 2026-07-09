@@ -231,13 +231,13 @@
   </div>
 
   <div class="btn-bar">
-    <button id="btn-print" onclick="printEntrega()" disabled>🖨 Imprimir entrega</button>
+    <button id="btn-print" onclick="printEntrega()" disabled>🧾 Guardar comprobante PDF</button>
     <div class="verified-banner" id="verified-banner">✔ Respuestas verificadas</div>
   </div>
 
   <div class="content">
     <div class="intro-box">
-      <b>Instrucciones:</b> Este cuestionario está pensado para una sesión de <b>60 minutos</b>. Al iniciar, verás <b>una pregunta a la vez</b>. La siguiente se habilita únicamente cuando respondas la actual. Puedes volver a preguntas anteriores mientras el tiempo siga activo. Después de entregar, aparecerá la nota sobre <b>5.0</b>, el desglose por competencia y la retroalimentación de cada pregunta.
+      <b>Instrucciones:</b> Este cuestionario está pensado para una sesión de <b>60 minutos</b>. Al iniciar, verás <b>una pregunta a la vez</b>. La siguiente se habilita únicamente cuando respondas la actual. Puedes volver a preguntas anteriores mientras el tiempo siga activo. Después de enviar, aparecerá la nota sobre <b>5.0</b>, el desglose por competencia y la retroalimentación de cada pregunta.
     </div>
 
     <div class="student-info">
@@ -254,14 +254,14 @@
     <div class="start-panel" id="start-panel">
       <h3>Modo cuestionario secuencial · 60 minutos</h3>
       <p>Al iniciar, se habilita el taller por una hora en este navegador. El avance queda guardado localmente para evitar que una recarga simple reinicie el tiempo.</p>
-      <p>La siguiente pregunta solo se activa cuando marques una respuesta. Al finalizar el tiempo, el cuestionario se entrega automáticamente con lo que esté respondido.</p>
+      <p>La siguiente pregunta solo se activa cuando marques una respuesta. Al finalizar el tiempo, el cuestionario se envía automáticamente con lo que esté respondido.</p>
       <div class="start-actions">
         <button id="btn-start" onclick="iniciarExamen()">▶ Iniciar cuestionario</button>
         <span class="mode-note">Para GitHub Pages: todos usan el mismo enlace, pero cada navegador maneja su propio tiempo.</span>
       </div>
     </div>
 
-    <div class="time-ended" id="time-ended">⏰ Tiempo finalizado. El cuestionario fue bloqueado y entregado automáticamente.</div>
+    <div class="time-ended" id="time-ended">⏰ Tiempo finalizado. El cuestionario fue bloqueado y enviado automáticamente.</div>
 
     <div class="exam-control-panel" id="exam-control-panel">
       <div class="exam-control-row">
@@ -660,7 +660,7 @@
 
 
     <div class="delivery-card" id="delivery-card">
-      <h3>Comprobante de entrega</h3>
+      <h3>Comprobante de envío</h3>
       <div class="delivery-grid">
         <div class="delivery-item"><b>Folio:</b> <span class="delivery-folio" id="folio-value">—</span></div>
         <div class="delivery-item"><b>Versión:</b> <span id="version-value">—</span></div>
@@ -669,12 +669,12 @@
         <div class="delivery-item"><b>Identificación:</b> <span id="identification-value">—</span></div>
         <div class="delivery-item"><b>Fecha:</b> <span id="date-value">—</span></div>
         <div class="delivery-item"><b>Inicio:</b> <span id="start-value">—</span></div>
-        <div class="delivery-item"><b>Entrega:</b> <span id="end-value">—</span></div>
+        <div class="delivery-item"><b>Envío:</b> <span id="end-value">—</span></div>
         <div class="delivery-item"><b>Tiempo usado:</b> <span id="elapsed-value">—</span></div>
         <div class="delivery-item"><b>Resultado:</b> <span id="result-value">—</span></div>
         <div class="delivery-item"><b>Guardado en hoja:</b> <span id="sheet-save-status">Pendiente</span></div>
       </div>
-      <div class="delivery-warning">Este folio se genera localmente en el navegador. Sirve como evidencia de entrega para revisión presencial, pero no equivale a validación en servidor.</div>
+      <div class="delivery-warning">El comprobante PDF se habilita únicamente cuando el sistema confirma que las respuestas quedaron guardadas en la hoja conectada al formulario.</div>
     </div>
 
     <div class="score-panel" id="resultado">
@@ -770,9 +770,12 @@ let startTime = null;
 let timerInterval = null;
 
 const questionnaireVersion = 'UDI-CLASE1-RC-2026-V6-AUDITADO';
-// Si publicas este HTML dentro de Apps Script, NO debes cambiar esta línea.
-// Si lo publicas en GitHub Pages, pega aquí la URL /exec del Web App y se usará envío alterno no-cors.
-const GOOGLE_SCRIPT_WEB_APP_URL = '';
+// CONEXIÓN CON GOOGLE SHEETS / APPS SCRIPT
+// Si vas a abrir este HTML desde Apps Script como Aplicación web, puedes dejar esta línea como está.
+// Si vas a subir el HTML a GitHub Pages u otro servidor externo, reemplaza el texto entre comillas
+// por la URL de Apps Script que termina en /exec. Ejemplo:
+// const GOOGLE_SCRIPT_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycb.../exec';
+const GOOGLE_SCRIPT_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzudlZQPePTX01edV2cn00fZ860AJs0xtE8M7Az1wvixs0lgFpVQjrC8a7--iQMhAwf/exec';
 
 const minJustificationChars = 8;
 const justificationQids = ['q5','q10','q15','q20','q25','q30'].filter(qid => questions[qid]);
@@ -979,12 +982,18 @@ function setPrintEnabled(enabled){
   const btn = document.getElementById('btn-print');
   if(btn){
     btn.disabled = !enabled;
-    btn.title = enabled ? 'Imprimir comprobante de entrega' : 'La impresión se habilita después de entregar.';
+    btn.title = enabled
+      ? 'Guardar o imprimir comprobante PDF del envío confirmado.'
+      : 'Disponible solo después de enviar y confirmar el guardado en la hoja.';
   }
 }
 function printEntrega(){
   if(!yaVerificado){
-    alert('La impresión se habilita solo después de entregar el cuestionario.');
+    alert('Primero debes enviar el cuestionario. El PDF se habilita al final.');
+    return;
+  }
+  if(!getState().sheetSaved){
+    alert('Espera a que aparezca “Guardado” en la hoja. Luego podrás guardar o imprimir el comprobante PDF.');
     return;
   }
   window.print();
@@ -1006,7 +1015,9 @@ function renderDeliveryCard(totalScore, timeout=false){
   setText('start-value', formatDateTime(finalStartTime));
   setText('end-value', formatDateTime(finalEndTime));
   setText('elapsed-value', formatDuration(finalEndTime - finalStartTime));
-  setText('result-value', `${Number(totalScore || 0).toFixed(2)} / 5.0${timeout ? ' · entrega automática por tiempo' : ''}`);
+  setText('result-value', `${Number(totalScore || 0).toFixed(2)} / 5.0${timeout ? ' · envío automático por tiempo' : ''}`);
+  setSheetSaveStatus('Pendiente', null);
+  setPrintEnabled(false);
   const card = document.getElementById('delivery-card');
   if(card) card.classList.add('show');
   return finalData;
@@ -1193,9 +1204,9 @@ function actualizarVistaPregunta(){
   const navHint = document.getElementById('nav-hint');
   if(currentIndex === totalQuestions - 1){
     instruction.textContent = preguntaActualRespondida()
-      ? 'Ya estás en la última pregunta. La entrega queda justo debajo.'
-      : 'Marca una opción y completa la justificación si aparece para habilitar la entrega final.';
-    if(navHint) navHint.textContent = preguntaActualRespondida() ? 'Última pregunta respondida. Entrega abajo.' : 'Marca una opción y completa la justificación si aparece para habilitar la entrega.';
+      ? 'Ya estás en la última pregunta. El envío queda justo debajo.'
+      : 'Marca una opción y completa la justificación si aparece para habilitar el envío final.';
+    if(navHint) navHint.textContent = preguntaActualRespondida() ? 'Última pregunta respondida. Envío abajo.' : 'Marca una opción y completa la justificación si aparece para habilitar el envío.';
   } else {
     instruction.textContent = preguntaActualRespondida()
       ? 'Puedes avanzar a la siguiente pregunta o volver a revisar una anterior.'
@@ -1245,12 +1256,13 @@ function updateProgress(){
   }
   progress.textContent = ready
     ? `Listo: ${answered} / ${totalQuestions} preguntas respondidas y ${justified} / ${justificationQids.length} justificaciones completas. Ya puedes verificar.`
-    : `Avance: ${answered} / ${totalQuestions} opciones marcadas · ${justified} / ${justificationQids.length} justificaciones completas. La entrega se activa al completar todo.`;
+    : `Avance: ${answered} / ${totalQuestions} opciones marcadas · ${justified} / ${justificationQids.length} justificaciones completas. El envío se activa al completar todo.`;
   btn.disabled = !ready;
 }
 
 function mostrarTodoParaRevision(){
-  setPrintEnabled(true);
+  // El comprobante PDF solo se habilita cuando Apps Script confirma el guardado.
+  setPrintEnabled(!!getState().sheetSaved);
   disableStudentFields(true);
   const bottomNav = document.getElementById('question-bottom-nav');
   if(bottomNav) bottomNav.classList.remove('show');
@@ -1317,8 +1329,10 @@ function construirPayloadResultado(totalScore, compCount, finalData, timeout=fal
 
 function enviarResultadoAGoogleSheet(payload){
   const state = getState();
+  setPrintEnabled(false);
   if(state.sheetSaved){
     setSheetSaveStatus('Ya estaba guardado', true);
+    setPrintEnabled(true);
     return;
   }
 
@@ -1331,11 +1345,13 @@ function enviarResultadoAGoogleSheet(payload){
         const fila = res && res.row ? ` · fila ${res.row}` : '';
         setSheetSaveStatus('Guardado' + fila, true);
         saveState({sheetSaved:true, sheetRow: res && res.row ? res.row : ''});
+        setPrintEnabled(true);
       })
       .withFailureHandler(function(err){
         console.error(err);
         setSheetSaveStatus('Error al guardar', false);
-        alert('El cuestionario se calificó, pero no se pudo guardar en la hoja. Revisa el despliegue de Apps Script.');
+        setPrintEnabled(false);
+        alert('El cuestionario se calificó, pero no se pudo guardar en la hoja. Revisa el despliegue de Apps Script. El PDF no se habilitará hasta confirmar el guardado.');
       })
       .guardarResultado(payload);
     return;
@@ -1343,7 +1359,7 @@ function enviarResultadoAGoogleSheet(payload){
 
   // Opción alternativa: HTML externo, por ejemplo GitHub Pages.
   // Como el navegador bloquea CORS, se envía en modo no-cors. No permite confirmar la respuesta, pero Apps Script recibe los datos.
-  if(GOOGLE_SCRIPT_WEB_APP_URL){
+  if(GOOGLE_SCRIPT_WEB_APP_URL && !GOOGLE_SCRIPT_WEB_APP_URL.includes('PEGAR_AQUI')){
     fetch(GOOGLE_SCRIPT_WEB_APP_URL, {
       method: 'POST',
       mode: 'no-cors',
@@ -1352,14 +1368,18 @@ function enviarResultadoAGoogleSheet(payload){
     }).then(function(){
       setSheetSaveStatus('Enviado a la hoja', true);
       saveState({sheetSaved:true});
+      setPrintEnabled(true);
     }).catch(function(err){
       console.error(err);
       setSheetSaveStatus('Error al enviar', false);
+      setPrintEnabled(false);
     });
     return;
   }
 
-  setSheetSaveStatus('No conectado', false);
+  setSheetSaveStatus('No conectado: falta URL /exec', false);
+  setPrintEnabled(false);
+  alert('Falta conectar el formato. Pega en el HTML la URL de Apps Script que termina en /exec, o abre el formato directamente desde la aplicación web de Apps Script.');
 }
 
 function verificar(force=false, timeout=false){
@@ -1414,7 +1434,7 @@ function verificar(force=false, timeout=false){
   btn.textContent = timeout ? '⏰ Tiempo finalizado' : '✓ Respuestas enviadas';
   document.getElementById('progress-text').textContent = timeout
     ? `Tiempo finalizado. Respuestas registradas: ${countAnswered()} / ${totalQuestions}.`
-    : 'Envío completado. Revisa la retroalimentación de cada pregunta.';
+    : 'Envío realizado. Espera la confirmación de guardado para activar el PDF.';
   if(timeout) document.getElementById('time-ended').style.display = 'block';
 
   document.querySelectorAll('.justification-textarea').forEach(t => t.disabled = true);
