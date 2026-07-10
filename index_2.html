@@ -108,13 +108,14 @@
   .mc-option{display:flex; align-items:flex-start; gap:9px; padding:8px 12px; border:1px solid var(--border); border-radius:8px; margin-bottom:6px; cursor:pointer; font-size:.9rem; line-height:1.35; transition:background .15s,border .15s;}
   .mc-option:hover{background:#F8FAFC;}
   .mc-option input{margin-top:2px; cursor:pointer;}
-  .mc-option.correct{background:var(--green-light); border-color:var(--green); font-weight:700;}
-  .mc-option.incorrect{background:var(--red-light); border-color:var(--red);}
+
   .locked .mc-option{pointer-events:none; opacity:.9;}
-  .feedback{display:none; margin-top:10px; padding:10px 14px; border-radius:8px; font-size:.86rem; line-height:1.5; background:#F8FAFC; border-left:4px solid var(--udi-blue); color:#334155;}
-  .feedback.show{display:block;}
-  .feedback b{color:var(--udi-blue-dark);}
   .verify-panel{background:#F7FBFF; border:1px solid var(--border); border-left:6px solid var(--udi-yellow); border-radius:14px; padding:18px; margin:18px 0; display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;}
+  .send-status{margin-top:12px; padding:10px 14px; border-radius:8px; font-size:.88rem; font-weight:700; background:#F1F5F9; border:1px solid var(--border); color:#334155;}
+  .send-status.sending{background:var(--udi-yellow-soft); border-color:#F6D84A; color:#614A00;}
+  .send-status.ok{background:var(--green-light); border-color:var(--green); color:#15803d;}
+  .send-status.warn{background:var(--red-light); border-color:#fecaca; color:#991b1b;}
+  #btn-retry-send{display:none; margin-top:10px; background:var(--udi-blue); color:#fff;}
   .progress-text{font-size:.9rem; color:#475569; font-weight:700;}
   .score-panel{background:#F1F6F9; border:2px solid var(--udi-blue); border-radius:14px; padding:20px 24px; margin-top:10px;}
   .score-panel h3{margin:0 0 12px 0; color:var(--udi-blue-dark);}
@@ -191,12 +192,12 @@
 
   <div class="btn-bar">
     <button id="btn-print" onclick="printEntrega()" disabled>🖨 Imprimir entrega</button>
-    <div class="verified-banner" id="verified-banner">✔ Respuestas verificadas</div>
+    <div class="verified-banner" id="verified-banner">✔ Respuestas entregadas</div>
   </div>
 
   <div class="content">
     <div class="intro-box">
-      <b>Instrucciones:</b> Este taller está pensado para una sesión de <b>60 minutos</b>. En cada pregunta debes decidir primero qué se está pidiendo: total, faltante, valor de varios, valor de uno, porcentaje, proporción, promedio o cantidad mínima. El botón <b>Verificar respuestas</b> está al final y solo se activa cuando estén marcadas las <b>30 preguntas</b>. Después de verificar, aparecerá la nota sobre <b>5.0</b>, el resultado de <b>Formulación y ejecución</b> y una retroalimentación debajo de cada pregunta.
+      <b>Instrucciones:</b> Este taller está pensado para una sesión de <b>60 minutos</b>. En cada pregunta debes decidir primero qué se está pidiendo: total, faltante, valor de varios, valor de uno, porcentaje, proporción, promedio o cantidad mínima. El botón <b>Entregar respuestas</b> está al final y solo se activa cuando estén marcadas las <b>30 preguntas</b>. Después de entregar, aparecerá la nota sobre <b>5.0</b>, el resultado de <b>Formulación y ejecución</b> y el comprobante de entrega. La <b>retroalimentación de cada pregunta</b> la compartirá el docente en un documento aparte, después de la revisión en clase.
     </div>
 
     <div class="student-info">
@@ -559,8 +560,8 @@
     
 
     <div class="verify-panel">
-      <div class="progress-text" id="progress-text">Responde todas las preguntas y justificaciones para activar la verificación: 0 / 30</div>
-      <button id="btn-verify" onclick="verificar()" disabled>✅ Verificar respuestas</button>
+      <div class="progress-text" id="progress-text">Responde todas las preguntas y justificaciones para activar la entrega: 0 / 30</div>
+      <button id="btn-verify" onclick="verificar()" disabled>✅ Entregar respuestas</button>
     </div>
 
 
@@ -578,7 +579,9 @@
         <div class="delivery-item"><b>Tiempo usado:</b> <span id="elapsed-value">—</span></div>
         <div class="delivery-item"><b>Resultado:</b> <span id="result-value">—</span></div>
       </div>
-      <div class="delivery-warning">Este folio se genera localmente en el navegador. Sirve como evidencia de entrega para revisión presencial, pero no equivale a validación en servidor.</div>
+      <div class="delivery-warning">El folio se genera en el navegador y sirve como evidencia de entrega. Además, los resultados se envían automáticamente a la hoja de cálculo del docente.</div>
+      <div class="send-status" id="send-status">Preparando envío de resultados…</div>
+      <button id="btn-retry-send" onclick="intentarEnvio()">🔁 Reintentar envío de resultados</button>
     </div>
 
     <div class="score-panel">
@@ -713,38 +716,6 @@ const questions = {
     "correct": "b",
     "comp": "formular"
   }
-};
-const feedback = {
-  "q1": "La pregunta pide el total de varios grupos de productos. Cuando se juntan partes de un mismo conjunto, la operación adecuada es sumar: 45+60+25.",
-  "q2": "La pregunta pide cuánto falta para llegar a 180. Se calcula 180−135=45.",
-  "q3": "Hay 9 grupos iguales de 12 jugos. Por eso se multiplica: 9×12=108.",
-  "q4": "Se reparte un total en 30 partes iguales: 240.000÷30=8.000.",
-  "q5": "Para promediar se suman los datos y se divide entre la cantidad de datos: (12+16+20+24)÷4=72÷4=18.",
-  "q6": "El paquete A tiene 4 galletas y cuesta $2.400. El precio por galleta es 2.400÷4=$600.",
-  "q7": "El menor costo unitario es el del paquete B: $500 por galleta. A cuesta $600 y C cuesta $580 por galleta.",
-  "q8": "Para hallar el valor de una unidad se divide el precio total entre la cantidad de unidades.",
-  "q9": "La conveniencia no se decide por el precio total, sino por el costo unitario. El paquete B cuesta menos por galleta.",
-  "q10": "Cada paquete B trae 6 galletas. Para 12 galletas necesita 2 paquetes: 2×$3.000=$6.000.",
-  "q11": "150÷40=3,75. Como no se puede contratar una fracción de bus y todos deben viajar, se necesitan 4 buses.",
-  "q12": "Tres buses llevan 3×40=120 estudiantes. Como hay 150, faltarían 30 puestos.",
-  "q13": "165÷45≈3,67. Se redondea hacia arriba porque se necesitan buses completos para todos los estudiantes: 4 buses.",
-  "q14": "La capacidad total se obtiene multiplicando 4×45=180 estudiantes.",
-  "q15": "Cuando el resultado representa objetos necesarios, como buses, el decimal se interpreta redondeando hacia arriba para cubrir a todos.",
-  "q16": "El 25% es la cuarta parte. 120÷4=30 estudiantes.",
-  "q17": "36 de 120 equivale a 36÷120=0,30, es decir, 30%.",
-  "q18": "La estrategia adecuada es comparar los valores de la tabla. Baloncesto tiene 36 estudiantes, que es el mayor valor, pero la pregunta evalúa la decisión de comparar cantidades antes de marcar.",
-  "q19": "El porcentaje depende del total. En este caso, 30÷120=0,25, por tanto 30 estudiantes representan 25%, no 30%.",
-  "q20": "Se puede sumar fútbol, baloncesto y voleibol: 30+36+24=90, o restar 120−30=90.",
-  "q21": "8-A y 8-C tienen 40%. Aunque 8-C tiene más estudiantes con lonchera, la proporción es igual a la de 8-A.",
-  "q22": "Cuando los totales son distintos, la comparación justa exige dividir cada parte entre el total de su curso.",
-  "q23": "La proporción se calcula como parte÷total. Luego puede expresarse como decimal o porcentaje.",
-  "q24": "8-A tiene 40% y 8-B tiene 30%. La diferencia es 40%−30%=10 puntos porcentuales.",
-  "q25": "16÷40=0,40=40%. Esa proporción coincide con 8-A y 8-C.",
-  "q26": "Se suman los tres costos: 240.000+180.000+80.000=500.000.",
-  "q27": "La pregunta pide el sobrante: 650.000−500.000=150.000.",
-  "q28": "El 10% de 80.000 es 8.000. La opción $72.000 sería el precio final, no el descuento.",
-  "q29": "Se calcula (24+30+36)÷3=90÷3=30. Además, el promedio debe estar entre 24 y 36.",
-  "q30": "Formular y ejecutar implica construir una estrategia: entender qué se pide, seleccionar datos útiles, elegir la operación, calcular y verificar."
 };
 
 const totalQuestions = Object.keys(questions).length;
@@ -1172,12 +1143,12 @@ function updateProgress(){
   const progress = document.getElementById('progress-text');
   const ready = allRequirementsMet();
   if(yaVerificado){
-    progress.textContent = 'Verificación completada. Revisa el comprobante, la nota y la retroalimentación.';
+    progress.textContent = 'Entrega completada. Revisa el comprobante y la nota. La retroalimentación se entregará en un documento aparte.';
     btn.disabled = true;
     return;
   }
   progress.textContent = ready
-    ? `Listo: ${answered} / ${totalQuestions} preguntas respondidas y ${justified} / ${justificationQids.length} justificaciones completas. Ya puedes verificar.`
+    ? `Listo: ${answered} / ${totalQuestions} preguntas respondidas y ${justified} / ${justificationQids.length} justificaciones completas. Ya puedes entregar.`
     : `Avance: ${answered} / ${totalQuestions} opciones marcadas · ${justified} / ${justificationQids.length} justificaciones completas. La entrega se activa al completar todo.`;
   btn.disabled = !ready;
 }
@@ -1197,6 +1168,94 @@ function mostrarTodoParaRevision(){
   document.querySelector('.score-panel').classList.remove('exam-hidden');
 }
 
+// ============================================================
+// Envío de resultados a Google Sheets (Apps Script)
+// Pega aquí la URL de tu implementación de Aplicación web,
+// la que termina en /exec. Ejemplo:
+// const ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycb.../exec';
+// ============================================================
+const ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbxw9GCQCz-G2BZ6LaYA3c_dm3MyFDrAi4vtmbfgs177X1W4CWmZfXtbiYN_bbjJgiKr/exec';
+
+let ultimoPayload = null;
+
+function setSendStatus(clase, texto, mostrarReintento=false){
+  const el = document.getElementById('send-status');
+  const btn = document.getElementById('btn-retry-send');
+  if(el){ el.className = 'send-status ' + clase; el.textContent = texto; }
+  if(btn){ btn.style.display = mostrarReintento ? 'inline-block' : 'none'; }
+}
+
+function construirPayload(totalScore, compCount, timeout, finalData){
+  // Nota: las letras de "marcada" y "correcta" corresponden al documento
+  // maestro (q1..q30 en orden canónico), no al orden aleatorio en pantalla.
+  const respuestas = {};
+  Object.keys(questions).forEach(qid => {
+    const checked = document.querySelector(`input[name="${qid}"]:checked`);
+    const marcada = checked ? checked.value : '';
+    respuestas[qid] = {
+      marcada: marcada,
+      correcta: questions[qid].correct,
+      acierto: marcada === questions[qid].correct ? 1 : 0
+    };
+  });
+  const state = getState();
+  const inicio = Number(startTime || state.startTime || 0);
+  const fin = Number((finalData && finalData.endTime) || state.endTime || Date.now());
+  const est = collectStudentInfo();
+  return {
+    version: questionnaireVersion,
+    attemptId: (finalData && finalData.attemptId) || attemptId || '',
+    estudiante: est,
+    nombreCompleto: est.nombre,
+    respuestas: respuestas,
+    justificaciones: getJustifications(),
+    resultadosCompetencia: { formular: { correct: compCount.formular.correct, total: compCount.formular.total } },
+    calificacionFinal: Number(totalScore.toFixed(2)),
+    totalPreguntas: totalQuestions,
+    inicioISO: inicio ? new Date(inicio).toISOString() : '',
+    envioISO: fin ? new Date(fin).toISOString() : '',
+    tiempoSegundos: (inicio && fin) ? Math.max(0, Math.round((fin - inicio) / 1000)) : '',
+    tiempoTexto: (inicio && fin) ? formatDuration(fin - inicio) : '',
+    timeout: !!timeout
+  };
+}
+
+function intentarEnvio(){
+  if(!ultimoPayload) return;
+  setSendStatus('sending', '⏳ Enviando resultados a la hoja del docente…');
+  fetch(ENDPOINT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(ultimoPayload)
+  })
+  .then(r => r.json())
+  .then(data => {
+    if(data && data.ok){
+      setSendStatus('ok', '✔ Resultados enviados correctamente. Folio registrado: ' + ultimoPayload.attemptId);
+      saveState({sent: true});
+    } else {
+      throw new Error((data && data.error) || 'Respuesta inválida del servidor.');
+    }
+  })
+  .catch(err => {
+    setSendStatus('warn', '⚠ No se pudieron enviar los resultados (' + err + '). Verifica tu conexión y usa el botón de reintento. El comprobante impreso sigue siendo válido.', true);
+  });
+}
+
+function enviarResultados(totalScore, compCount, timeout, finalData){
+  ultimoPayload = construirPayload(totalScore, compCount, timeout, finalData);
+  const configurada = /^https:\/\/script\.google\.com\/.+\/exec\/?$/.test(ENDPOINT_URL);
+  if(!configurada){
+    setSendStatus('warn', '⚠ El envío automático no está configurado (falta la URL /exec en el código). Entrega el comprobante impreso al docente.');
+    return;
+  }
+  if(getState().sent === true){
+    setSendStatus('ok', '✔ Estos resultados ya fueron enviados a la hoja del docente. Folio: ' + ultimoPayload.attemptId);
+    return;
+  }
+  intentarEnvio();
+}
+
 function verificar(force=false, timeout=false){
   if(yaVerificado) return;
   if(!force && !allRequirementsMet()) return;
@@ -1214,25 +1273,13 @@ function verificar(force=false, timeout=false){
     let selected = null;
     radios.forEach(r => { if(r.checked) selected = r.value; });
 
-    radios.forEach(r => {
-      const label = r.closest('.mc-option');
-      if(r.value === info.correct){ label.classList.add('correct'); }
-      else if(r.value === selected && selected !== info.correct){ label.classList.add('incorrect'); }
-      r.disabled = true;
-    });
+    radios.forEach(r => { r.disabled = true; });
 
     if(selected === info.correct){
       totalScore += pointsPer;
       compCount[info.comp].correct++;
     }
     qDiv.classList.add('locked');
-
-    if(!qDiv.querySelector('.feedback')){
-      const fb = document.createElement('div');
-      fb.className = 'feedback show';
-      fb.innerHTML = '<b>Retroalimentación:</b> ' + feedback[qid];
-      qDiv.appendChild(fb);
-    }
   }
 
   document.getElementById('score-total').textContent = `Puntaje: ${totalScore.toFixed(2)} / 5.0`;
@@ -1242,20 +1289,21 @@ function verificar(force=false, timeout=false){
   document.getElementById('verified-banner').classList.add('show');
   const btn = document.getElementById('btn-verify');
   btn.disabled = true;
-  btn.textContent = timeout ? '⏰ Tiempo finalizado' : '✓ Respuestas verificadas';
+  btn.textContent = timeout ? '⏰ Tiempo finalizado' : '✓ Respuestas entregadas';
   document.getElementById('progress-text').textContent = timeout
     ? `Tiempo finalizado. Respuestas registradas: ${countAnswered()} / ${totalQuestions}.`
-    : 'Verificación completada. Revisa la retroalimentación de cada pregunta.';
+    : 'Entrega completada. La retroalimentación de cada pregunta se entregará en un documento aparte.';
   if(timeout) document.getElementById('time-ended').style.display = 'block';
 
   document.querySelectorAll('.justification-textarea').forEach(t => t.disabled = true);
   mostrarTodoParaRevision();
   saveState({verified:true, finalScore: totalScore, endTime: finalData.endTime, attemptId: finalData.attemptId, student: finalData.student, timeout});
+  enviarResultados(totalScore, compCount, timeout, finalData);
   document.getElementById('score-total').scrollIntoView({behavior:'smooth', block:'center'});
 }
 
 function mostrarRevisionSinRecalcular(){
-  // Si el navegador recupera un estado ya entregado, se recalcula solo para reconstruir colores y retroalimentación.
+  // Si el navegador recupera un estado ya entregado, se recalcula solo para reconstruir la nota y el comprobante.
   yaVerificado = false;
   verificar(true, false);
 }
